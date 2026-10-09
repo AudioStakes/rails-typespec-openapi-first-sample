@@ -233,6 +233,20 @@ bin/check
 Swagger UI が読む `public/openapi.yaml` と `public/swagger-ui/` は生成物として Git の追跡対象から除外し、セットアップで再現します。
 編集する仕様は `api/main.tsp`、レビューする生成結果は `openapi/openapi.yaml` です。
 
+## TypeSpec の公式ツールで仕様を編集・プレビューする
+
+VS Code では、公式の [TypeSpec 拡張](https://marketplace.visualstudio.com/items?itemName=typespec.typespec-vscode)を利用できます。
+`api/main.tsp` を開き、コマンドパレットから `TypeSpec: Preview API Documentation` を実行すると、生成した API 仕様をエディター内で確認できます。
+このプレビューにも Swagger UI が使われています。
+入力補完や診断、プレビューの使い方は [公式の VS Code ガイド](https://typespec.io/docs/introduction/editor/vscode/)で確認できます。
+
+インストールせずに書き方を試すなら、公式の [TypeSpec Playground](https://typespec.io/playground)も使えます。
+ブラウザーで TypeSpec を編集し、生成した OpenAPI と API ドキュメントを確認できます。
+
+このリポジトリのデモでは、編集した仕様を `npm run openapi` で生成し、起動済みの Rails を再起動してから、ローカルの Swagger UI で API を実行します。
+エディターのプレビューと、Rails が読み込む契約をこの手順で一致させます。
+TypeSpec のエコシステムと API UI の比較、Swagger UI を継続する理由は [調査記録](docs/research/typespec-ecosystem.md)にまとめています。
+
 ## 主要ファイル
 
 | ファイル | 役割 |
