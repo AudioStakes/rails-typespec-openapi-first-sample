@@ -3,73 +3,28 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>タスク管理 | TypeSpec × Rails</title>
+    <title>TypeSpec × openapi_first × Rails | Swagger UI</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="/app.css">
-    <script src="/app.js" defer></script>
+    <link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
+    <script src="/swagger-ui/swagger-ui-bundle.js" defer></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        SwaggerUIBundle({
+          url: "/openapi.yaml",
+          dom_id: "#swagger-ui",
+          validatorUrl: null,
+          deepLinking: true
+        });
+      });
+    </script>
   </head>
   <body>
-    <main class="workspace">
-      <header class="page-header">
-        <p class="eyebrow">TypeSpec × openapi_first × Rails</p>
-        <h1>タスク管理</h1>
-        <p class="intro">タスクを追加して、状態を変えてみましょう。画面の下でAPIの結果も確認できます。</p>
-        <p><a href="/api-docs.html">OpenAPIの仕様を読む</a></p>
-      </header>
-
-      <section class="task-panel" aria-labelledby="tasks-heading">
-        <form id="task-form" class="composer">
-          <label for="task-title">新しいタスク <span class="required-label">必須</span></label>
-          <div class="composer-controls">
-            <input id="task-title" name="title" type="text" required autocomplete="off" aria-describedby="title-help title-count" placeholder="例：API仕様をレビューする">
-            <button id="create-button" class="primary-button" type="submit">タスクを追加</button>
-          </div>
-          <div class="input-hints">
-            <p id="title-help">タイトルは1〜100文字</p>
-            <p id="title-count">0 / 100</p>
-          </div>
-        </form>
-
-        <div class="list-toolbar">
-          <div class="list-heading">
-            <h2 id="tasks-heading">タスク一覧</h2>
-            <span id="task-count" class="count-badge">0件</span>
-          </div>
-          <div class="list-controls">
-            <label for="status-filter">状態</label>
-            <select id="status-filter" name="status">
-              <option value="">すべて</option>
-              <option value="todo">未着手</option>
-              <option value="doing">進行中</option>
-              <option value="done">完了</option>
-            </select>
-            <button id="reload-button" class="quiet-button" type="button">再読み込み</button>
-          </div>
-        </div>
-
-        <p id="error-message" class="error-message" role="alert" hidden></p>
-        <p id="notice-message" class="notice-message" role="status" aria-live="polite"></p>
-        <div id="task-list-area" class="task-list-area" aria-busy="false">
-          <ul id="task-list" class="task-list"></ul>
-          <p id="empty-message" class="empty-message">一覧を読み込んでいます…</p>
-        </div>
-      </section>
-
-      <details class="api-details" open>
-        <summary>最後のAPI通信 <span id="api-status" class="api-status">待機中</span></summary>
-        <div class="api-content">
-          <div class="api-block">
-            <h2>リクエスト</h2>
-            <pre id="api-request">まだ送信していません。</pre>
-          </div>
-          <div class="api-block">
-            <h2>レスポンス</h2>
-            <pre id="api-response">まだ受信していません。</pre>
-          </div>
-        </div>
-      </details>
-      <p class="page-note">作成・更新後も、そのAPI通信を表示します。絞り込み・再読み込みで一覧の通信に切り替わります。</p>
-      <noscript><p class="error-message">この操作画面を使うには、ブラウザのJavaScriptを有効にしてください。</p></noscript>
-    </main>
+    <header class="swagger-ui wrapper">
+      <h1>TypeSpec × openapi_first × Rails</h1>
+      <p>TypeSpecで仕様を定義し、OpenAPIを生成します。openapi_firstが入力を検証し、RSpecでレスポンスの契約を検証します。</p>
+      <p>POSTで作成 → GETで確認 → PATCHで変更。各APIのExecuteで実行できます。</p>
+    </header>
+    <main id="swagger-ui"></main>
+    <noscript><p>API仕様の閲覧と実行にはJavaScriptを有効にしてください。</p></noscript>
   </body>
 </html>

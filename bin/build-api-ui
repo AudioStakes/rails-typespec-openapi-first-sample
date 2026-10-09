@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+require "fileutils"
+
+root = File.expand_path("..", __dir__)
+dist = File.join(root, "node_modules/swagger-ui-dist")
+destination = File.join(root, "public/swagger-ui")
+files = %w[swagger-ui-bundle.js swagger-ui.css LICENSE NOTICE swagger-ui-bundle.js.LICENSE.txt]
+
+files.each do |file|
+  abort "Missing #{file}. Run npm ci first." unless File.file?(File.join(dist, file))
+end
+
+FileUtils.mkdir_p(destination)
+files.each { |file| FileUtils.cp(File.join(dist, file), File.join(destination, file)) }
+FileUtils.cp(File.join(root, "openapi/openapi.yaml"), File.join(root, "public/openapi.yaml"))
+puts "Swagger UI assets and OpenAPI copied to public/."

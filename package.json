@@ -7,18 +7,24 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "openapi": "tsp compile api/main.tsp && npm run openapi:docs",
+    "openapi": "tsp compile api/main.tsp && npm run openapi:ui",
     "openapi:check": "ruby bin/check-openapi",
-    "openapi:docs": "redocly build-docs openapi/openapi.yaml --output public/api-docs.html --disableGoogleFont --theme.openapi.hideDownloadButton=true --title \"Tasks API\""
+    "openapi:ui": "ruby bin/build-api-ui"
   },
   "overrides": {
     "undici": "7.29.1"
   },
+  "scarfSettings": {
+    "enabled": false
+  },
+  "allowScripts": {
+    "@scarf/scarf": false
+  },
   "devDependencies": {
-    "@redocly/cli": "2.61.0",
     "@typespec/compiler": "1.17.0",
     "@typespec/http": "1.17.0",
     "@typespec/openapi": "1.17.0",
-    "@typespec/openapi3": "1.17.0"
+    "@typespec/openapi3": "1.17.0",
+    "swagger-ui-dist": "5.33.1"
   }
 }

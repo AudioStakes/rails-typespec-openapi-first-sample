@@ -35,4 +35,5 @@
 /node_modules/
 /.serena/
 /coverage/
-/public/api-docs.html
+/public/swagger-ui/
+/public/openapi.yaml

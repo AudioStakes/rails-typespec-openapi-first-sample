@@ -7,6 +7,7 @@ paths:
   /api/tasks:
     get:
       operationId: Tasks_list
+      summary: タスク一覧を取得する
       description: Return tasks in ascending id order, optionally filtered by status.
       parameters:
         - name: status
@@ -44,10 +45,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
     post:
       operationId: Tasks_create
+      summary: タスクを作成する
       description: Create a task with status=todo.
       parameters: []
       responses:
@@ -77,7 +80,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
         '415':
           description: Client error
@@ -99,7 +103,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
       requestBody:
         required: true
@@ -110,6 +115,7 @@ paths:
   /api/tasks/{id}:
     get:
       operationId: Tasks_read
+      summary: タスクを取得する
       parameters:
         - name: id
           in: path
@@ -144,7 +150,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
         '404':
           description: The server cannot find the requested resource.
@@ -154,6 +161,7 @@ paths:
                 $ref: '#/components/schemas/NotFoundError'
     patch:
       operationId: Tasks_update
+      summary: タスクを更新する
       parameters:
         - name: id
           in: path
@@ -188,7 +196,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
         '404':
           description: The server cannot find the requested resource.
@@ -216,7 +225,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/ValidationError'
-                unevaluatedProperties: false
+                unevaluatedProperties:
+                  not: {}
                 description: The default error response returned by openapi_first.
       requestBody:
         required: true
@@ -233,7 +243,8 @@ components:
       properties:
         title:
           $ref: '#/components/schemas/TaskTitle'
-      unevaluatedProperties: false
+      unevaluatedProperties:
+        not: {}
     NotFoundError:
       type: object
       required:
@@ -241,7 +252,8 @@ components:
       properties:
         error:
           type: string
-      unevaluatedProperties: false
+      unevaluatedProperties:
+        not: {}
     Task:
       type: object
       required:
@@ -256,7 +268,8 @@ components:
           $ref: '#/components/schemas/TaskTitle'
         status:
           $ref: '#/components/schemas/TaskStatus'
-      unevaluatedProperties: false
+      unevaluatedProperties:
+        not: {}
     TaskStatus:
       type: string
       enum:
@@ -275,7 +288,8 @@ components:
           $ref: '#/components/schemas/TaskTitle'
         status:
           $ref: '#/components/schemas/TaskStatus'
-      unevaluatedProperties: false
+      unevaluatedProperties:
+        not: {}
       description: An empty object is a valid update; null values are not allowed.
     ValidationError:
       type: object
@@ -295,8 +309,9 @@ components:
           type: string
         cookie:
           type: string
-      unevaluatedProperties: false
+      unevaluatedProperties:
+        not: {}
 servers:
-  - url: http://localhost:3000
-    description: Local Rails server
+  - url: /
+    description: Same-origin Rails API
     variables: {}

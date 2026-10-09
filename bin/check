@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 Dir.chdir(File.expand_path("..", __dir__)) do
   system("npm", "run", "openapi:check", exception: true)
-  system("npm", "run", "openapi:docs", exception: true)
+  system("npm", "run", "openapi:ui", exception: true)
   system("bundle", "exec", "rspec", exception: true)
 end

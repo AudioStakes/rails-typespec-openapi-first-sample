@@ -1,13 +1,50 @@
-# 作成・検証結果
+# 検証記録
 
-2026年10月9日（日本時間）にローカルで検証しました。
+## Swagger UI と completed 演習
+
+2026年10月9日（日本時間）に、Swagger UI へ一本化した構成と README の新しい演習を検証しました。
+Swagger UI は `swagger-ui-dist` 5.33.1 のローカル配布物を使い、独自のタスク画面と Redocly による HTML 生成を外しました。
+主リポジトリの Task は `id`、`title`、`status` の 3 項目を維持しています。
+
+| 確認 | 実測結果 |
+| --- | --- |
+| 主リポジトリの `bin/setup` | frozen Bundler、npm ci、同期確認、Swagger UI 配置、DB 準備が成功。npm audit は 0 件 |
+| 主リポジトリの `bin/check` | OpenAPI 同期一致、Swagger UI 配置、RSpec 35 件、失敗 0 件 |
+| 隔離コピーの基準 | DB 準備後に RSpec 35 件、失敗 0 件 |
+| 段階 3 の status 返却漏れ | 終了コード 2。35 件中 11 件失敗。ResponseInvalidError が必須 status の欠落を検出 |
+| 段階 3 の復元 | 同じ RSpec 35 件、失敗 0 件 |
+| 段階 4 の completed 仕様追加だけ | 再生成後に終了コード 2。35 件中 11 件失敗。ResponseInvalidError が必須 completed の欠落を検出 |
+| 段階 4 の実装修正 | serializer に boolean を追加すると、同期一致、Swagger UI 配置、同じ RSpec 35 件、失敗 0 件 |
+| Swagger UI の Execute | POST 201、状態クエリ付き GET 200、id 指定 GET 200、title と status の PATCH 200。再取得で保存結果を確認 |
+| Swagger UI の不正入力 | title 欠落、未定義の本文項目、不正な status を 400 で拒否。不正な送信による保存変更なし |
+| 同一オリジンとローカル配信 | 全リクエストが 127.0.0.1:3001。同じ UI が外部通信を遮断した状態でも動作し、CDN と外部 validator への通信なし |
+| ブラウザーの表示とエラー | 390px 幅で横はみ出しなし。pageErrors は空。console のエラーは意図した 400 の resource エラーのみ |
+
+演習は `/private/tmp/rails-swagger-demo.AfrtEQ` に、README と同じ rsync と依存ディレクトリのシンボリックリンクでコピーして実行しました。
+テストファイルは変更していません。
+TypeSpec の Task に `completed: boolean;` を追加すると、生成済み契約の検証条件が更新され、その項目を返さない既存実装を検出しました。
+serializer の `.merge("completed" => task.status == "done")` への変更後は、同じテストが成功しました。
+
+この演習が確認したのは、新しい項目の存在と boolean 型の契約です。
+`status` が `done` のときだけ `true` になるという意味的な整合性の保証には、別の業務動作テストが必要です。
+演習の仕様変更と実装修正はコピー側にだけ残し、主リポジトリと既存の開発 DB は保持しました。
+
+ブラウザーでは `http://127.0.0.1:3001/` の Swagger UI から実際の API を実行しました。
+既存のタスク #1 を保持し、確認用のタスク #2 を 1 件追加して更新しました。
+ブラウザー検証後の主リポジトリの `bin/check` も、RSpec 35 件、失敗 0 件でした。
+
+## 初版のローカル検証
+
+以下は、2026年10月9日（日本時間）に行った初版のローカル検証記録です。
+独自のタスク操作画面と priority 演習を対象とした過去の結果であり、現在の Swagger UI と completed 演習の構成とは異なります。
+現行の起動方法とデモ手順は [README](../README.md) にあります。
 
 作成先は `/Users/satoudaisuke/Documents/ChatGPT/rails-typespec-openapi-first-sample` です。
 同名の用意済みディレクトリと未コミットのGitリポジトリを使用し、Rails生成時にもGit初期化を実行しました。
 初版のローカル検証時点では、コミット、push、リモート作成、Pull Request作成は行っていませんでした。
 その後の依頼により、[プライベートGitHubリポジトリ](https://github.com/AudioStakes/rails-typespec-openapi-first-sample)を作成しました。
 
-## 使用したバージョン
+### 使用したバージョン
 
 | ツール | バージョン |
 | --- | --- |
@@ -28,7 +65,7 @@ asdfの既存インストールを利用し、プロジェクトのバージョ�
 検証時はNode.js 24.18.0を明示して実行しました。
 グローバルのバージョン設定は変更していません。
 
-## 実際の生成コマンド
+### 実際の生成コマンド
 
 `rails _8.1.3.1_ new --help` と [Rails公式資料](https://guides.rubyonrails.org/v8.1/command_line.html)を確認し、次を実行しました。
 
@@ -38,7 +75,7 @@ rails _8.1.3.1_ new . --api --minimal --database=sqlite3 --no-rc --skip-bundle -
 
 生成された不要なdebug gem、CORS設定、標準CIスクリプトを取り除き、`bin/rails generate rspec:install` を実行しました。
 
-## 直接依存と必要性
+### 直接依存と必要性
 
 Rubyの直接宣言はRails、sqlite3、Puma、openapi_first、rspec-rails、json、Windows/JRuby用のtzinfo-dataです。
 Web処理、永続化、サーバー、契約検証、RSpecと、必要な互換性・プラットフォーム対応を担います。
@@ -51,7 +88,7 @@ npmの直接依存は公式のTypeSpec compiler/http/openapi/openapi3の4つで�
 推移的依存のundiciは修正済みの7.29.1へ固定し、監査結果は0件です。
 追加のフロントエンド依存はありません。
 
-## 実施結果
+### 実施結果
 
 | 確認 | 結果 |
 | --- | --- |
@@ -77,7 +114,7 @@ npmの直接依存は公式のTypeSpec compiler/http/openapi/openapi3の4つで�
 また、SQLiteのlengthはNULで数え方が変わるため、DBではNOT NULL・空でないバイト列・状態enumを保証し、1〜100文字はTypeSpecとモデルで検証します。
 NULを含む有効な文字列も回帰テストで確認しました。
 
-## 起動と確認
+### 起動と確認
 
 ```sh
 bin/setup
@@ -87,11 +124,11 @@ bin/check
 ```
 
 [http://localhost:3000](http://localhost:3000) を開いて操作します。
-検証のため起動したサーバーは127.0.0.1:3000で稼働中です。
-新しい開発DBには動作確認用の「契約テストを読む」タスク1件があります。
-詳細な演習・個別復元手順と全公式参照は [README](../README.md) にあります。
+当時は検証のために127.0.0.1:3000でサーバーを起動しました。
+動作確認用の「契約テストを読む」タスク1件を開発DBに保存しました。
+当時の演習では、独自のタスク画面と priority の追加を確認しました。
 
-## 未実施と保持したファイル
+### 未実施と保持したファイル
 
 GitHub Actionsはローカルに1ワークフローを用意しましたが、GitHub上では実行していません。
 同じ検証コマンドはローカルで実行済みです。
@@ -99,5 +136,5 @@ GitHub Actionsはローカルに1ワークフローを用意しましたが、Gi
 
 DB削除は自動承認レビューで、既存データを不可逆に失う操作として拒否されました。
 削除せず、元の `storage/development.sqlite3` と `storage/test.sqlite3` を保持しました。
-現在の設定は新規の `storage/tasks_development.sqlite3` と `storage/tasks_test.sqlite3` を使用しています。
+初版では新規の `storage/tasks_development.sqlite3` と `storage/tasks_test.sqlite3` を使用しました。
 仕様変更デモも隔離した一時コピーで実行したため、元の仕様・実装・DBにpriority演習の変更は残っていません。
