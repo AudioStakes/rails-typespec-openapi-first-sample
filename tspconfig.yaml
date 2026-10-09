@@ -1,0 +1,10 @@
+emit:
+  - "@typespec/openapi3"
+output-dir: "{cwd}/openapi"
+options:
+  "@typespec/openapi3":
+    emitter-output-dir: "{output-dir}"
+    output-file: "openapi.yaml"
+    openapi-versions:
+      - "3.1.0"
+    seal-object-schemas: true

@@ -1,0 +1,313 @@
+openapi: 3.1.0
+info:
+  title: Tasks API
+  version: 1.0.0
+tags: []
+paths:
+  /api/tasks:
+    get:
+      operationId: Tasks_list
+      description: Return tasks in ascending id order, optionally filtered by status.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 400
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+    post:
+      operationId: Tasks_create
+      description: Create a task with status=todo.
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 400
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+        '415':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 415
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTask'
+  /api/tasks/{id}:
+    get:
+      operationId: Tasks_read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 400
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+    patch:
+      operationId: Tasks_update
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 400
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '415':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                required:
+                  - title
+                  - status
+                properties:
+                  title:
+                    type: string
+                  status:
+                    type: number
+                    enum:
+                      - 415
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ValidationError'
+                unevaluatedProperties:
+                  not: {}
+                description: The default error response returned by openapi_first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTask'
+components:
+  schemas:
+    CreateTask:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          $ref: '#/components/schemas/TaskTitle'
+      unevaluatedProperties:
+        not: {}
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+      unevaluatedProperties:
+        not: {}
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          $ref: '#/components/schemas/TaskTitle'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+      unevaluatedProperties:
+        not: {}
+    TaskStatus:
+      type: string
+      enum:
+        - todo
+        - doing
+        - done
+    TaskTitle:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Shared by the response and both request models.
+    UpdateTask:
+      type: object
+      properties:
+        title:
+          $ref: '#/components/schemas/TaskTitle'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+      unevaluatedProperties:
+        not: {}
+      description: An empty object is a valid update; null values are not allowed.
+    ValidationError:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        pointer:
+          type: string
+        parameter:
+          type: string
+        header:
+          type: string
+        cookie:
+          type: string
+      unevaluatedProperties:
+        not: {}
+servers:
+  - url: http://localhost:3000
+    description: Local Rails server
+    variables: {}

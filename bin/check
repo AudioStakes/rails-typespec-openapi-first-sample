@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+Dir.chdir(File.expand_path("..", __dir__)) do
+  system("npm", "run", "openapi:check", exception: true)
+  system("bundle", "exec", "rspec", exception: true)
+end

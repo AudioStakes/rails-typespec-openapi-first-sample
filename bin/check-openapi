@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+require "tmpdir"
+
+Dir.chdir(File.expand_path("..", __dir__)) do
+  Dir.mktmpdir("tasks-openapi-") do |directory|
+    success = system("node_modules/.bin/tsp", "compile", "api/main.tsp", "--output-dir", directory)
+    abort "TypeSpec compilation failed" unless success
+
+    generated = File.join(directory, "openapi.yaml")
+    saved = "openapi/openapi.yaml"
+    unless File.file?(saved) && File.binread(saved) == File.binread(generated)
+      abort "OpenAPI is out of sync. Run npm run openapi, then review the generated file."
+    end
+    puts "OpenAPI matches api/main.tsp."
+  end
+end

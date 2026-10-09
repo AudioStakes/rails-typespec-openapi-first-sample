@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+require "fileutils"
+
+APP_ROOT = File.expand_path("..", __dir__)
+
+def system!(*args)
+  system(*args, exception: true)
+end
+
+FileUtils.chdir APP_ROOT do
+  puts "== Installing dependencies =="
+  system! "bundle", "config", "set", "--local", "path", "vendor/bundle"
+  system!({ "BUNDLE_FROZEN" => "true" }, "bundle", "install")
+  system! "npm", "ci"
+  system! "npm", "run", "openapi:check"
+
+  puts "\n== Preparing database =="
+  system! "bin/rails db:prepare"
+  puts "\nReady. Start with bin/rails server; verify with bin/check."
+end
