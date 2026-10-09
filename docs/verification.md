@@ -1,5 +1,29 @@
 # 検証記録
 
+## 解説記事の再検証
+
+2026年10月9日（日本時間）に、[記事](article.md) の中心的な体験を、新規の作業コピー `/private/tmp/article-contract-verification.vIeTIp` で再検証しました。
+仕様と実装の変更はこのコピー内だけで行いました。
+
+| 操作 | 終了コード | 結果 |
+| --- | --- | --- |
+| コピーの基準 `bin/check` | 0 | 同期一致、RSpec 35 件、失敗 0 件 |
+| Task に completed を追加し、生成前に `openapi:check` | 1 | 保存済み OpenAPI との不一致を検出 |
+| `npm run openapi` | 0 | completed の required と boolean 型を生成 |
+| 実装を変更せず RSpec | 2 | 35 件中 11 件失敗。全 11 件が missing completed の ResponseInvalidError |
+| serializer 修正後の `bin/check` | 0 | 同期一致、同じ RSpec 35 件、失敗 0 件 |
+| 主リポジトリの `bin/check` | 0 | 同期一致、RSpec 35 件、失敗 0 件 |
+
+`spec/` 全ファイルのハッシュは、変更前、契約変更後、実装修正後で一致しました。
+テストの追加や変更で検証条件を追従させた結果ではありません。
+失敗時の終了コード 2 には、API coverage が 75.0% になったことによる終了処理も含まれます。
+記事のログはエラー本文と実測件数の抜粋です。
+新しい項目と status の意味的な関係を検証するテストは、この演習では追加していません。
+
+実行ログは作業コピーの `verification/` に保存しています。
+初回のサンドボックス実行ではテスト用 DRb の bind が拒否されたため、必要な権限を付けて再実行しました。
+元のコード、開発 DB、起動中のサーバーは変更していません。
+
 ## Swagger UI と completed 演習
 
 2026年10月9日（日本時間）に、Swagger UI へ一本化した構成と README の新しい演習を検証しました。
