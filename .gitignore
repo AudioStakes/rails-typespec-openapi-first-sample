@@ -35,3 +35,4 @@
 /node_modules/
 /.serena/
 /coverage/
+/public/api-docs.html

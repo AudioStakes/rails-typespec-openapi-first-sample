@@ -20,33 +20,40 @@ enum TaskStatus {
   done,
 }
 
+// Boolean false preserves sealing and lets Redoc display closed objects correctly.
+@extension("unevaluatedProperties", false)
 model Task {
   id: int64;
   title: TaskTitle;
   status: TaskStatus;
 }
 
+@extension("unevaluatedProperties", false)
 model CreateTask {
   title: TaskTitle;
 }
 
 /** An empty object is a valid update; null values are not allowed. */
+@extension("unevaluatedProperties", false)
 model UpdateTask {
   title?: TaskTitle;
   status?: TaskStatus;
 }
 
+@extension("unevaluatedProperties", false)
 model NotFoundError {
   error: string;
 }
 
 /** The default error response returned by openapi_first. */
+@extension("unevaluatedProperties", false)
 model Problem<Code extends int32> {
   title: string;
   status: Code;
   errors?: ValidationError[];
 }
 
+@extension("unevaluatedProperties", false)
 model ValidationError {
   message: string;
   code: string;

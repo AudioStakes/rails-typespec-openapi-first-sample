@@ -13,6 +13,7 @@ FileUtils.chdir APP_ROOT do
   system!({ "BUNDLE_FROZEN" => "true" }, "bundle", "install")
   system! "npm", "ci"
   system! "npm", "run", "openapi:check"
+  system! "npm", "run", "openapi:docs"
 
   puts "\n== Preparing database =="
   system! "bin/rails db:prepare"

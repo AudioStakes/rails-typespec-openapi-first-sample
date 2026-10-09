@@ -8,17 +8,19 @@ Rails の通常のモデル、コントローラー、request spec と、ビル�
 
 API が受け付ける入力と返す出力を、**API 契約**として TypeSpec に定義します。
 DB のテーブルやアプリの処理は、それぞれ Rails の migration と Ruby のコードに書きます。
-このサンプルで自動生成するものは OpenAPI です。
+TypeSpec から OpenAPI を生成し、その OpenAPI からブラウザーで読める API ドキュメントの HTML を生成します。
 
 | 要素 | 役割 |
 | --- | --- |
 | TypeSpec | API 契約の正本。共通の型、文字数、状態の候補、必須項目、HTTP の操作を定義する |
 | OpenAPI 3.1 | TypeSpec から生成する YAML。openapi_first が読む共通の契約 |
+| Redocly CLI | OpenAPI から API の操作、入力、レスポンスを読める HTML を生成する |
 | openapi_first | API の入口でリクエストを検証し、テストでは HTTP ステータス、Content-Type、レスポンス本文も検証する |
 | Rails | ルーティング、保存、検索、部分更新、JSON の返却、静的画面の配信を行う |
 | RSpec | 実際の Rails アプリへリクエストを送り、契約と保存結果を確認する |
 
 `api/main.tsp` → `npm run openapi` → `openapi/openapi.yaml` → openapi_first、という順に契約が渡ります。
+同じコマンドが `public/api-docs.html` も生成し、検証に使う契約をブラウザーでも確認できます。
 TypeSpec の `TaskTitle` は作成、更新、レスポンスで使い、`TaskStatus` は更新、一覧の絞り込み、レスポンスで再利用します。
 
 ## 必要な環境とセットアップ
@@ -35,6 +37,7 @@ Ruby の gem や npm パッケージを使うためのインターネット接�
 | Node.js | 24.18.0（`.node-version`） |
 | npm | 11.16.0 |
 | TypeSpec の公式パッケージ 4 個 | すべて 1.17.0 |
+| Redocly CLI | 2.61.0 |
 | openapi_first | 4.2.0 |
 | rspec-rails | 8.0.4 |
 | Puma | 7.2.1 |
@@ -53,7 +56,7 @@ bin/setup
 bin/check
 ```
 
-`bin/setup` は、プロジェクト内の `vendor/bundle` へ frozen モードで `bundle install` し、`npm ci`、OpenAPI の同期確認、`bin/rails db:prepare` を順に実行します。
+`bin/setup` は、プロジェクト内の `vendor/bundle` へ frozen モードで `bundle install` し、`npm ci`、OpenAPI の同期確認、API ドキュメントの生成、`bin/rails db:prepare` を順に実行します。
 `Gemfile.lock` と `package-lock.json` の内容から依存を再現し、既存 DB を初期化し直さずに準備します。
 サーバー起動は次のコマンドで行います。
 
@@ -65,6 +68,11 @@ bin/rails server
 一覧の状態を変更すると PATCH が送信され、絞り込みを変更すると GET の `status` クエリが変わります。
 画面には直近のリクエスト、HTTP ステータス、JSON も表示されます。
 HTML、CSS、JavaScript を Rails の `public/` から同一オリジンで配信するため、別のフロントエンドサーバーや CORS の設定は必要ありません。
+
+操作画面の「OpenAPIの仕様を読む」リンク、または [http://localhost:3000/api-docs.html](http://localhost:3000/api-docs.html) から API の操作とスキーマを確認できます。
+仕様は生成した HTML に埋め込み、表示用の Redoc はバージョン付き URL と SRI を指定して CDN から読み込みます。
+そのため、API ドキュメントをブラウザーで表示する際にはインターネット接続が必要です。
+Google Fonts の読み込みは無効にしています。
 
 ## API と検証コマンド
 
@@ -82,6 +90,7 @@ DB のタイムスタンプはレスポンスに含めません。
 タイトルの空文字や `null` は拒否しますが、長さを満たす空白文字列はそのまま保存します。
 `PATCH` の `{}` は変更しない正常な更新であり、`null` を指定する更新は不正です。
 `seal-object-schemas: true` により、リクエスト本文に未定義の項目を追加することも拒否します。
+Redoc の表示を正確にするため、各オブジェクトモデルに `@extension("unevaluatedProperties", false)` を付け、既定の `{ not: {} }` と同じ禁止制約を `false` で出力します。
 作成時に `status` を指定する操作は初版の契約に含めていません。
 
 入力が契約に合わなければ 400、JSON 以外の Content-Type で本文を送れば 415 です。
@@ -90,8 +99,11 @@ DB のタイムスタンプはレスポンスに含めません。
 これらのエラーレスポンスも TypeSpec の契約に含めています。
 
 ```sh
-# TypeSpec を変更した後、保存済み OpenAPI を更新する
+# TypeSpec を変更した後、OpenAPI と API ドキュメントを生成する
 npm run openapi
+
+# 保存済み OpenAPI から API ドキュメントだけを生成する
+npm run openapi:docs
 
 # 保存済みファイルを書き換えず、TypeSpec と一致するか調べる
 npm run openapi:check
@@ -99,7 +111,7 @@ npm run openapi:check
 # 契約、API の動作、モデルをテストする
 bundle exec rspec
 
-# 同期確認と RSpec をまとめて実行する
+# 同期確認、API ドキュメントの生成、RSpec をまとめて実行する
 bin/check
 ```
 
@@ -107,6 +119,22 @@ bin/check
 未コミット、未追跡のファイルでも機能し、チェックによって保存済み生成物の差分を消すことはありません。
 TypeSpec の変更後は `npm run openapi` の差分を確認し、Rails とテストを更新してから `bin/check` を実行します。
 起動中のサーバーは契約を起動時に読み込むため、OpenAPI を再生成したら再起動してください。
+
+`npm run openapi:docs` は、次の Redocly CLI コマンドを実行します。
+
+```sh
+redocly build-docs openapi/openapi.yaml \
+  --output public/api-docs.html \
+  --disableGoogleFont \
+  --theme.openapi.hideDownloadButton=true \
+  --title "Tasks API"
+```
+
+`redocly` はプロジェクトの npm scripts 内で使うローカルコマンドです。
+直接実行する場合は、先頭を `node_modules/.bin/redocly` に置き換えてください。
+ダウンロードボタンの生成 HTML とブラウザーの描画が一致しない [上流の既知の問題](https://github.com/Redocly/redoc/issues/2693) に対応し、標準オプションでボタンを非表示にしています。
+生成した `public/api-docs.html` は `.gitignore` により Git の追跡対象から除外し、`bin/setup` で再現します。
+表示内容を変更するときは TypeSpec と OpenAPI を更新して再生成してください。
 
 ## 主要ファイルの読み方
 
@@ -125,8 +153,9 @@ TypeSpec の変更後は `npm run openapi` の差分を確認し、Rails とテ�
 | `spec/requests/tasks_spec.rb` | 正常入力と不正入力、DB の保存結果、404、部分更新 |
 | `spec/models/task_spec.rb` | モデル検証と、モデルを経由しない書き込みへの DB 制約 |
 | `public/index.html`、`public/app.css`、`public/app.js` | ビルドなしで動く 1 ページの操作画面 |
+| `public/api-docs.html` | OpenAPI から生成するブラウザー用 API ドキュメント。Git の追跡対象外 |
 | `bin/setup`、`bin/check`、`bin/check-openapi` | lockfile に基づく準備、検証、生成物の同期確認 |
-| `.github/workflows/check.yml` | 同期確認と RSpec を実行する最小の CI |
+| `.github/workflows/check.yml` | `bin/check` で同期確認、API ドキュメントの生成、RSpec を実行する最小の CI |
 
 生成された YAML は確認用にも保存しています。
 仕様を直すときは `api/main.tsp` を編集して再生成してください。
@@ -314,6 +343,8 @@ enum TaskPriority {
   high,
 }
 
+// Boolean false preserves sealing and lets Redoc display closed objects correctly.
+@extension("unevaluatedProperties", false)
 model Task {
   id: int64;
   title: TaskTitle;
@@ -328,7 +359,15 @@ model Task {
 ruby <<'RUBY'
 path = "api/main.tsp"
 source = File.read(path)
-before = "model Task {\n  id: int64;\n  title: TaskTitle;\n  status: TaskStatus;\n}"
+before = <<~TSP.chomp
+  // Boolean false preserves sealing and lets Redoc display closed objects correctly.
+  @extension("unevaluatedProperties", false)
+  model Task {
+    id: int64;
+    title: TaskTitle;
+    status: TaskStatus;
+  }
+TSP
 after = <<~TSP.chomp
   enum TaskPriority {
     low,
@@ -336,6 +375,8 @@ after = <<~TSP.chomp
     high,
   }
 
+  // Boolean false preserves sealing and lets Redoc display closed objects correctly.
+  @extension("unevaluatedProperties", false)
   model Task {
     id: int64;
     title: TaskTitle;
@@ -496,7 +537,7 @@ bin/rails generate rspec:install
 ```
 
 `--skip-ci` で標準の追加ツールを前提とするワークフローを省き、`.github/workflows/check.yml` に、このアプリ用の 1 つのワークフローを用意しました。
-CI は Ruby と Node.js を準備し、lockfile に基づいて依存をインストールして、OpenAPI の同期確認と `bundle exec rspec` を実行します。
+CI は Ruby と Node.js を準備し、lockfile に基づいて依存をインストールして、`bin/check` で OpenAPI の同期確認、API ドキュメントの生成、`bundle exec rspec` を実行します。
 実行方法を変える専用テストランナーや、CI のための gem は追加していません。
 
 ## 直接依存と lockfile
@@ -518,8 +559,9 @@ Rails 8.1.3.1 の JSON デコーダーはオプションを位置引数で渡し
 そのため、もともと依存グラフにある json を 2.21.2 に固定しています。
 Rails 内部の呼び出しを別の標準 API へ差し替える変更や monkey patch を加えず、互換性のある版を選ぶための宣言です。
 
-Node.js の直接依存は、次の公式パッケージ 4 個を devDependencies に置いています。
-この組み合わせで必要な peer dependency を満たし、バージョンをすべて 1.17.0 に揃えています。
+Node.js の直接依存は、TypeSpec の公式パッケージ 4 個と、API ドキュメント生成用の Redocly CLI を devDependencies に置いています。
+TypeSpec のパッケージは必要な peer dependency を満たし、バージョンをすべて 1.17.0 に揃えています。
+`@redocly/cli` は 2.61.0 に固定し、既存の OpenAPI からドキュメントを生成するために追加しています。
 
 | npm パッケージ | 必要な理由 |
 | --- | --- |
@@ -527,6 +569,7 @@ Node.js の直接依存は、次の公式パッケージ 4 個を devDependencie
 | `@typespec/http` | HTTP のメソッド、パス、クエリ、本文、ステータスの定義 |
 | `@typespec/openapi` | OpenAPI のメタデータと openapi3 の必須依存 |
 | `@typespec/openapi3` | OpenAPI 3.1 の YAML 出力 |
+| `@redocly/cli` | OpenAPI からブラウザー用 API ドキュメントを生成 |
 
 推移的依存の `@scalar/json-magic` が指定する `undici 7.24.4` は、npm の `overrides` で同じ major の修正版 `7.29.1` に固定しています。
 これは追加の直接ライブラリではなく、必要な推移的依存の修正です。
@@ -543,7 +586,9 @@ FactoryBot、Faker、Swagger UI、専用シリアライザー、フロントエ�
 画面操作、4 API、不正入力、レスポンス契約違反、priority の仕様変更と実装修正をローカルで検証しました。
 生成コマンド、使用バージョン、各デモの失敗・成功、保持した検証用 DB と未実施項目は [検証報告](docs/verification.md) に記録しています。
 現在の DB は `storage/tasks_development.sqlite3` と `storage/tasks_test.sqlite3` です。
-GitHub Actions のリモート実行と本番デプロイは行っていません。
+初版のローカル検証時点では、GitHub Actions のリモート実行は行っていませんでした。
+その後、初回公開後の [GitHub Actions の check（実行 37895579726）](https://github.com/AudioStakes/rails-typespec-openapi-first-sample/actions/runs/37895579726) が成功しました。
+本番デプロイは行っていません。
 
 ## 参照した公式資料
 
@@ -554,6 +599,7 @@ GitHub Actions のリモート実行と本番デプロイは行っていませ�
 - [TypeSpec の HTTP 操作](https://typespec.io/docs/libraries/http/operations/)：リクエストとレスポンスのモデル化。
 - [TypeSpec の組み込み decorator](https://typespec.io/docs/standard-library/built-in-decorators/)：文字数などの制約。
 - [OpenAPI 3 emitter の設定](https://typespec.io/docs/emitters/openapi3/reference/emitter/)：出力先、OpenAPI 3.1、`seal-object-schemas`。
+- [Redocly CLI の build-docs](https://redocly.com/docs/cli/commands/build-docs)：OpenAPI からの HTML 生成、出力先、タイトル、Google Fonts の無効化。
 - [openapi_first 4.2.0](https://github.com/ahx/openapi_first/tree/v4.2.0)：登録、リクエスト検証、テストの観測。
 - [openapi_first 4.2.0 の Rails サンプル](https://github.com/ahx/openapi_first/tree/v4.2.0/examples/rails_app)：Rails への組み込み。
 - [rspec-rails 8.0.4](https://github.com/rspec/rspec-rails/tree/v8.0.4)：Rails に対応するテスト機能。
