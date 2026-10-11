@@ -13,27 +13,21 @@ module OpenapiContract
 
   # openapi_first 4.2 skips response validation when request media type routing
   # fails. Select the same operation's JSON representation to validate its 415.
-  module UnsupportedMediaTypeResponseValidation
-    def call(env)
-      response = super
-      if env[OpenapiFirst::REQUEST]&.error&.type == :unsupported_media_type
-        request = Rack::Request.new(env.merge("CONTENT_TYPE" => "application/json"))
-        status, headers, body = response
-        validated = OpenapiFirst::Test[:default].validate_response(
-          request, Rack::Response[status, headers, body], raise_error: true
-        )
-        raise OpenapiFirst::Error, "The 415 response was not checked against the API contract" unless validated
-      end
-      response
-    end
+  def self.validate_unsupported_media_type_response(request, response)
+    json_request = Rack::Request.new(request.env.merge("CONTENT_TYPE" => "application/json"))
+    validated = OpenapiFirst::Test[:default].validate_response(
+      json_request, Rack::Response[response.status, response.headers, [ response.body ]], raise_error: true
+    )
+    raise OpenapiFirst::Error, "The 415 response was not checked against the API contract" unless validated
   end
 end
 
 OpenapiFirst::Test.setup do |test|
-  # The default exemptions include 404/500; this sample validates every status.
+  # The defaults exempt invalid 401/404/500 responses, even for known statuses.
   test.ignored_unknown_status = []
   test.ignore_request_error do |request|
-    !OpenapiContract.api_path?(request.path) || OpenapiContract.expected_invalid_request?(request)
+    (!OpenapiContract.api_path?(request.path) && request.unknown?) ||
+      OpenapiContract.expected_invalid_request?(request)
   end
 end
 
@@ -52,7 +46,6 @@ OpenapiFirst.configure do |config|
 end
 
 OpenapiFirst::Test.observe(Rails.application)
-Rails.application.singleton_class.prepend(OpenapiContract::UnsupportedMediaTypeResponseValidation)
 
 RSpec.configure do |config|
   config.after(:each, type: :request) do |example|

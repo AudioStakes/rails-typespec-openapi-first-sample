@@ -9,6 +9,7 @@ RSpec.describe "Tasks API", type: :request do
     expect(response).to have_http_status(status)
     expect(response.media_type).to eq("application/problem+json")
     expect(response.parsed_body).to include("status" => status, "title" => a_kind_of(String))
+    OpenapiContract.validate_unsupported_media_type_response(request, response) if status == 415
   end
 
   describe "POST /api/tasks" do
@@ -119,6 +120,24 @@ RSpec.describe "Tasks API", type: :request do
         "CONTENT_TYPE" => "application/json",
         "CONTENT_LENGTH" => body.bytesize.to_s
       }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.map { |task| task.fetch("id") }).to eq([ todo.id, done.id ])
+    end
+
+    it "ignores query values that the runtime contract has not parsed" do
+      todo = Task.create!(title: "Todo", status: "todo")
+      done = Task.create!(title: "Done", status: "done")
+
+      # The runtime permits unknown query keys; exempt this request from Test.setup's stricter check.
+      test_configuration = OpenapiFirst::Test.configuration
+      allow(test_configuration).to receive(:raise_request_error?).and_call_original
+      allow(test_configuration).to receive(:raise_request_error?).with(have_attributes(
+        request_method: "GET", path: "/api/tasks", known?: true, valid?: true,
+        unknown_query_parameters: { "status[extra]" => "done" }
+      )).and_return(false)
+
+      expect { get "/api/tasks?status%5Bextra%5D=done" }.not_to change { stored_tasks }
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.map { |task| task.fetch("id") }).to eq([ todo.id, done.id ])

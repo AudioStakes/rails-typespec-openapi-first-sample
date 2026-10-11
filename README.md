@@ -30,6 +30,7 @@ bin/check
 bin/rails server
 ```
 
+`bin/check` が成功すると、RSpec は `36 examples, 0 failures` を報告します。
 [http://localhost:3000/](http://localhost:3000/) を開くと Swagger UI が表示されます。
 `bin/setup` は frozen モードの `bundle install`、`npm ci`、OpenAPI の同期確認、Swagger UI の配置、DB の準備を行います。
 既存 DB を初期化し直す処理はありません。
@@ -167,6 +168,7 @@ bundle exec rspec
 
 OpenAPI の `Task` に `completed` の `type: boolean` と required が生成されます。
 Rails はまだこの項目を返さないため、段階 3 と同じテストが `completed` の欠落で失敗します。
+実行結果は `36 examples, 12 failures` となり、契約カバレッジも既定の 100% に届かないため、終了コードは 2 になります。
 仕様を追加しただけで、レスポンスの検証条件も更新されています。
 
 次に `task_json` を変更し、保存済みの状態から計算した値を返します。
@@ -205,13 +207,21 @@ RSpec は各操作を実行する役割を持ち、API の入力と出力の形�
 
 | 対象 | このデモで検証する内容 |
 | --- | --- |
-| API 契約 | 型、必須項目、文字数、enum、クエリ、パス、HTTP ステータス、Content-Type |
+| API 契約 | 型、必須項目、文字数、enum、定義済みのクエリとパス、HTTP ステータス、Content-Type |
 | 業務動作 | `todo` で作成する、DB に保存する、絞り込む、送信した項目だけ更新する、404 を返す |
 | 保存する値 | Rails のモデル検証と SQLite の NOT NULL、空でない title、status の CHECK 制約 |
 
 TypeSpec から Rails の migration やコントローラーを自動生成する構成ではありません。
 仕様に合う入出力を機械的に検証し、保存や検索などの振る舞いは Ruby と RSpec で実装します。
 通常稼働時は入力検証、RSpec 実行時は入力とレスポンスの両方の検証を有効にしています。
+
+通常の入力検証は、仕様にないクエリを拒否せず、検証済みの `parsed_query` から除外します。
+RSpec の観測時には、未知のクエリも契約違反として扱います。
+未定義の本文項目は、OpenAPI emitter の `seal-object-schemas: true` で生成した制約により、通常稼働時にも拒否します。
+
+検証済みの値は `env[OpenapiFirst::REQUEST]` に保持され、Rails の `params` が自動で置き換わるわけではありません。
+コントローラーは `parsed_query`、`parsed_body`、`parsed_path_parameters` を使い、更新する属性はその値からさらに限定します。
+レスポンスの検証はアプリの処理後に行うので、契約違反を検出しても DB の更新を取り消す処理はしません。
 
 ## 生成とチェック
 
@@ -254,7 +264,7 @@ TypeSpec のエコシステムと API UI の比較、Swagger UI を継続する�
 | `api/main.tsp`、`tspconfig.yaml` | API 契約と OpenAPI 3.1 の出力設定 |
 | `openapi/openapi.yaml` | Swagger UI と openapi_first が共有する生成済み契約 |
 | `config/initializers/openapi_first.rb` | 契約の登録と `/api` 以下の入力検証 |
-| `app/controllers/api/tasks_controller.rb` | 4 操作の処理と 3 項目のレスポンス |
+| `app/controllers/api/tasks_controller.rb` | 検証済みの値を使う 4 操作の処理と 3 項目のレスポンス |
 | `app/models/task.rb`、`db/migrate/` | 保存する値の検証と DB 制約 |
 | `spec/support/openapi_contract.rb` | request spec の入力とレスポンスの契約検証 |
 | `spec/requests/tasks_spec.rb`、`spec/models/task_spec.rb` | API の実行と業務動作、モデルと DB の検証 |
@@ -262,9 +272,20 @@ TypeSpec のエコシステムと API UI の比較、Swagger UI を継続する�
 | `bin/build-api-ui` | 保存済み OpenAPI と Swagger UI の assets を配置する |
 | `bin/setup`、`bin/check`、`bin/check-openapi` | lockfile からの準備と検証 |
 
-不正入力の request spec だけは、対象のメソッド、パス、契約違反の種類を指定して意図した失敗を許可します。
+公式はレスポンスの検証に [Contract Testing](https://github.com/ahx/openapi_first/blob/v4.2.0/README.md#response-validation) を推奨しています。
+このサンプルは Rails の初期化時に登録した契約を共有し、既存の request spec を `OpenapiFirst::Test.observe(Rails.application)` で観測します。
+`/api` 以下に限定する小さな middleware subclass は、非 API リクエストを契約外に置く、このサンプル独自の適用範囲です。
+`OpenapiFirst::Test.setup` はテスト用の設定とカバレッジの準備を行い、入出力の検証にはアプリを観測する設定も必要です。
+`coverage/openapi_coverage.html` は、定義されたリクエストとレスポンスを少なくとも一度、契約に適合する形で実行できたかを示します。
+入力値や業務条件の網羅を保証するものではありません。
+
+このデモでは `ignored_unknown_status = []` を指定し、初期値の `[401, 404, 500]` で対象ステータスの検証エラーをその場で例外にしない設定を解除しています。
+初期値のままでは、これらのステータスは仕様に定義済みでも、不正な本文を返したとき、その応答の検証時には例外になりません。
+カバレッジの集計は別に行われ、既定の 100% に届かなければ、テスト終了時に失敗します。
+`Test.setup` の既定の動作では、既知のリクエストの入力不適合すべてが、その場で例外になるわけではありません。
+このサンプルは補助 hook で通常の例の不正入力を失敗させ、不正入力の request spec だけは、対象のメソッド、パス、契約違反の種類を指定して許可します。
 その場合もエラーレスポンスの契約検証は行います。
-openapi_first 4.2.0 が通常の観測処理では検証を省く 415 については、サポートファイルで同じ操作のレスポンス契約へ照合しています。
+openapi_first 4.2.0 が通常の観測処理では検証を省く 415 については、その異常系テストで同じ操作のレスポンス契約へ明示的に照合します。
 
 ## 直接依存
 
@@ -286,3 +307,4 @@ Swagger UI はビルド済み配布物を使うため、このアプリ用の Ja
 - [openapi_first 4.2.0 と Rails のサンプル](https://github.com/ahx/openapi_first/tree/v4.2.0/examples/rails_app)
 - [Rails 8.1 の API モード](https://guides.rubyonrails.org/v8.1/api_app.html)
 - [作成と検証の記録](docs/verification.md)
+- [openapi_first 4.2.0 の監査記録](docs/openapi-first-audit.md)
